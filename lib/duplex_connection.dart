@@ -5,6 +5,9 @@ import 'rsocket.dart';
 
 import 'io/bytes.dart';
 
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as status;
+
 abstract class DuplexConnection implements Closeable, Availability {
   double _availability = 1.0;
   TcpChunkHandler receiveHandler;
@@ -61,14 +64,14 @@ class TcpDuplexConnection extends DuplexConnection {
 }
 
 class WebSocketDuplexConnection extends DuplexConnection {
-  WebSocket webSocket;
+  WebSocketChannel webSocket;
   bool closed = false;
 
   WebSocketDuplexConnection(this.webSocket);
 
   @override
   void init() {
-    webSocket.listen((message) {
+    webSocket.stream.listen((message) {
       var data = message as List<int>;
       var frameLenBytes = i24ToBytes(data.length);
       receiveHandler(Uint8List.fromList(frameLenBytes + data));
@@ -85,7 +88,7 @@ class WebSocketDuplexConnection extends DuplexConnection {
       closed = true;
       _availability = 0.0;
       if (webSocket != null) {
-        webSocket.close();
+        webSocket.sink.close();
       }
       if (closeHandler != null) {
         closeHandler();
@@ -96,19 +99,19 @@ class WebSocketDuplexConnection extends DuplexConnection {
   @override
   void write(Uint8List chunk) {
     //remove frame length: 3 bytes
-    webSocket.add(chunk.sublist(3));
+    webSocket.sink.add(chunk.sublist(3));
   }
 }
 
-Future<DuplexConnection> connectRSocket(String url, TcpChunkHandler handler) {
+Future<DuplexConnection> connectRSocket(String url, TcpChunkHandler handler) async {
   var uri = Uri.parse(url);
   var scheme = uri.scheme;
   if (scheme == 'tcp') {
     var socketFuture = Socket.connect(uri.host, uri.port);
     return socketFuture.then((socket) => TcpDuplexConnection(socket));
   } else if (scheme == 'ws' || scheme == 'wss') {
-    var socketFuture = WebSocket.connect(url);
-    return socketFuture.then((socket) => WebSocketDuplexConnection(socket));
+    var channel = WebSocketChannel.connect(uri);
+    return WebSocketDuplexConnection(channel);
   } else {
     return Future.error('${scheme} unsupported');
   }

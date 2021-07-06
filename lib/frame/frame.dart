@@ -375,7 +375,9 @@ class FrameCodec {
     } else {
       frameBuffer.writeI8(0);
     }
-    frameBuffer.writeI64(lastPosition);
+    //write 64 bits
+    frameBuffer.writeI32((lastPosition & 0xFFFFFFFF00000000) >> 32);
+    frameBuffer.writeI32(lastPosition & 0xFFFFFFFF);
     refillFrameLength(frameBuffer);
     return frameBuffer.toUint8Array();
   }

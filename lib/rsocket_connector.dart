@@ -12,7 +12,7 @@ class RSocketConnector {
   int keepAliveInterval = 20;
   int keepAliveMaxLifeTime = 90;
   String _dataMimeType = 'application/json';
-  String _metadataMimeType = 'message/x.rsocket.composite-metadata.v0';
+  String _metadataMimeType = 'message/x.rsocket.routing.v0';
   ErrorConsumer _errorConsumer;
   SocketAcceptor _acceptor;
 
